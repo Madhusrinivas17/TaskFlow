@@ -4,6 +4,10 @@ import sqlite3
 import os
 
 
+# =========================
+# APP SETUP
+# =========================
+
 app = Flask(
     __name__,
     static_folder="../frontend",
@@ -12,6 +16,10 @@ app = Flask(
 
 CORS(app)
 
+
+# =========================
+# DATABASE
+# =========================
 
 BASE_DIR = os.path.dirname(
     os.path.abspath(__file__)
@@ -23,6 +31,10 @@ DATABASE = os.path.join(
 )
 
 
+# =========================
+# FRONTEND
+# =========================
+
 @app.route("/")
 def home():
     return send_from_directory(
@@ -31,22 +43,52 @@ def home():
     )
 
 
+# =========================
+# HEALTH CHECK
+# =========================
+
+@app.route("/health")
+def health():
+    return jsonify({
+        "status": "Backend is running"
+    })
+
+
+# =========================
+# DATABASE CONNECTION
+# =========================
+
 def get_db_connection():
-    connection = sqlite3.connect(DATABASE)
+
+    connection = sqlite3.connect(
+        DATABASE
+    )
+
     connection.row_factory = sqlite3.Row
+
     return connection
 
 
+# =========================
+# CREATE TABLE
+# =========================
+
 def create_table():
+
     connection = get_db_connection()
 
     connection.execute(
         """
         CREATE TABLE IF NOT EXISTS tasks (
+
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+
             title TEXT NOT NULL,
+
             completed INTEGER DEFAULT 0,
+
             completed_at TEXT
+
         )
         """
     )
@@ -58,7 +100,14 @@ def create_table():
 create_table()
 
 
-@app.route("/tasks", methods=["GET"])
+# =========================
+# GET ALL TASKS
+# =========================
+
+@app.route(
+    "/tasks",
+    methods=["GET"]
+)
 def get_tasks():
 
     connection = get_db_connection()
@@ -67,25 +116,41 @@ def get_tasks():
         """
         SELECT *
         FROM tasks
-        ORDER BY completed ASC, id DESC
+        ORDER BY
+            completed ASC,
+            id DESC
         """
     ).fetchall()
 
     connection.close()
 
     return jsonify(
-        [dict(task) for task in tasks]
+        [
+            dict(task)
+            for task in tasks
+        ]
     )
 
 
-@app.route("/tasks", methods=["POST"])
+# =========================
+# ADD TASK
+# =========================
+
+@app.route(
+    "/tasks",
+    methods=["POST"]
+)
 def add_task():
 
     data = request.get_json()
 
-    title = data.get("title", "").strip()
+    title = data.get(
+        "title",
+        ""
+    ).strip()
 
     if title == "":
+
         return jsonify({
             "error": "Task title is required"
         }), 400
@@ -107,6 +172,10 @@ def add_task():
         "message": "Task added successfully"
     }), 201
 
+
+# =========================
+# COMPLETE / UNDO TASK
+# =========================
 
 @app.route(
     "/tasks/<int:task_id>/toggle",
@@ -133,32 +202,45 @@ def toggle_task(task_id):
             "error": "Task not found"
         }), 404
 
+
+    # Completed → Undo
+
     if task["completed"] == 1:
 
         connection.execute(
             """
             UPDATE tasks
-            SET completed = 0,
+
+            SET
+                completed = 0,
                 completed_at = NULL
+
             WHERE id = ?
             """,
             (task_id,)
         )
+
+
+    # Active → Complete
 
     else:
 
         connection.execute(
             """
             UPDATE tasks
-            SET completed = 1,
+
+            SET
+                completed = 1,
                 completed_at = datetime(
                     'now',
                     'localtime'
                 )
+
             WHERE id = ?
             """,
             (task_id,)
         )
+
 
     connection.commit()
     connection.close()
@@ -167,6 +249,10 @@ def toggle_task(task_id):
         "message": "Task updated successfully"
     })
 
+
+# =========================
+# DELETE TASK
+# =========================
 
 @app.route(
     "/tasks/<int:task_id>",
@@ -191,6 +277,10 @@ def delete_task(task_id):
         "message": "Task deleted successfully"
     })
 
+
+# =========================
+# RUN SERVER
+# =========================
 
 if __name__ == "__main__":
 
