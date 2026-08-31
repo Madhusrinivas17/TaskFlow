@@ -1,5 +1,37 @@
 const API_URL = "";
 
+async function requestJson(url, options = {}) {
+
+    try {
+
+        const response = await fetch(url, options);
+
+        if (!response.ok) {
+            let errorMessage = "Request failed.";
+
+            try {
+                const errorData = await response.json();
+
+                if (errorData && errorData.error) {
+                    errorMessage = errorData.error;
+                }
+            }
+            catch (err) {
+                console.error(err);
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        return await response.json();
+    }
+    catch (error) {
+        console.error(error);
+        return null;
+    }
+
+}
+
 // =========================
 // LOAD TASKS
 // =========================
@@ -7,20 +39,16 @@ const API_URL = "";
 window.onload = loadTasks;
 
 async function loadTasks() {
-    try {
-        const response = await fetch("/tasks");
+    const tasks = await requestJson("/tasks");
 
-        const tasks = await response.json();
-
-        displayTasks(tasks);
-    }
-    catch (error) {
-        console.error(error);
-
+    if (!tasks) {
         alert(
             "Cannot connect to the backend."
         );
+        return;
     }
+
+    displayTasks(tasks);
 }
 
 
@@ -251,41 +279,32 @@ async function addTask() {
     }
 
 
-    try {
+    const result = await requestJson(
+        "/tasks",
+        {
+            method: "POST",
 
-        await fetch(
-            "/tasks",
-            {
-                method: "POST",
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
 
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
+            body: JSON.stringify({
+                title: title
+            })
+        }
+    );
 
-                body: JSON.stringify({
-                    title: title
-                })
-            }
-        );
-
-
-        input.value = "";
-
-
-        loadTasks();
-
-    }
-
-    catch (error) {
-
-        console.error(error);
-
+    if (!result) {
         alert(
             "Failed to add task."
         );
-
+        return;
     }
+
+    input.value = "";
+
+    loadTasks();
 
 }
 
@@ -296,29 +315,21 @@ async function addTask() {
 
 async function toggleTask(id) {
 
-    try {
+    const result = await requestJson(
+        `/tasks/${id}/toggle`,
+        {
+            method: "PUT"
+        }
+    );
 
-        await fetch(
-            `/tasks/${id}/toggle`,
-            {
-                method: "PUT"
-            }
-        );
-
-
-        loadTasks();
-
-    }
-
-    catch (error) {
-
-        console.error(error);
-
+    if (!result) {
         alert(
             "Failed to update task."
         );
-
+        return;
     }
+
+    loadTasks();
 
 }
 
@@ -342,29 +353,21 @@ async function deleteTask(id) {
     }
 
 
-    try {
+    const result = await requestJson(
+        `/tasks/${id}`,
+        {
+            method: "DELETE"
+        }
+    );
 
-        await fetch(
-            `/tasks/${id}`,
-            {
-                method: "DELETE"
-            }
-        );
-
-
-        loadTasks();
-
-    }
-
-    catch (error) {
-
-        console.error(error);
-
+    if (!result) {
         alert(
             "Failed to delete task."
         );
-
+        return;
     }
+
+    loadTasks();
 
 }
 
