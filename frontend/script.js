@@ -1,5 +1,4 @@
-const API_URL = "http://127.0.0.1:5000";
-
+const API_URL = "";
 
 // =========================
 // LOAD TASKS
@@ -7,33 +6,21 @@ const API_URL = "http://127.0.0.1:5000";
 
 window.onload = loadTasks;
 
-
 async function loadTasks() {
-
     try {
-
-        const response = await fetch(
-            `${API_URL}/tasks`
-        );
-
+        const response = await fetch("/tasks");
 
         const tasks = await response.json();
 
-
         displayTasks(tasks);
-
     }
-
     catch (error) {
-
         console.error(error);
 
         alert(
             "Cannot connect to the backend."
         );
-
     }
-
 }
 
 
@@ -48,12 +35,10 @@ function displayTasks(tasks) {
             "activeTaskList"
         );
 
-
     const completedList =
         document.getElementById(
             "completedTaskList"
         );
-
 
     const historyList =
         document.getElementById(
@@ -62,14 +47,11 @@ function displayTasks(tasks) {
 
 
     activeList.innerHTML = "";
-
     completedList.innerHTML = "";
-
     historyList.innerHTML = "";
 
 
     let activeCount = 0;
-
     let completedCount = 0;
 
 
@@ -93,7 +75,6 @@ function displayTasks(tasks) {
                 createTaskElement(task)
             );
 
-
             historyList.appendChild(
                 createHistoryElement(task)
             );
@@ -103,7 +84,9 @@ function displayTasks(tasks) {
     });
 
 
-    // Counts
+    // =========================
+    // COUNTS
+    // =========================
 
     document.getElementById(
         "activeCount"
@@ -117,11 +100,12 @@ function displayTasks(tasks) {
 
     document.getElementById(
         "totalCount"
-    ).innerText =
-        tasks.length;
+    ).innerText = tasks.length;
 
 
-    // Empty messages
+    // =========================
+    // EMPTY MESSAGES
+    // =========================
 
     if (activeCount === 0) {
 
@@ -190,7 +174,6 @@ function createTaskElement(task) {
                     : "Complete"
                 }
             </button>
-
 
             <button
                 class="delete-btn"
@@ -271,7 +254,7 @@ async function addTask() {
     try {
 
         await fetch(
-            `${API_URL}/tasks`,
+            "/tasks",
             {
                 method: "POST",
 
@@ -316,7 +299,7 @@ async function toggleTask(id) {
     try {
 
         await fetch(
-            `${API_URL}/tasks/${id}/toggle`,
+            `/tasks/${id}/toggle`,
             {
                 method: "PUT"
             }
@@ -362,7 +345,7 @@ async function deleteTask(id) {
     try {
 
         await fetch(
-            `${API_URL}/tasks/${id}`,
+            `/tasks/${id}`,
             {
                 method: "DELETE"
             }
@@ -415,7 +398,9 @@ function escapeHTML(text) {
     const div =
         document.createElement("div");
 
+
     div.textContent = text;
+
 
     return div.innerHTML;
 

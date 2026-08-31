@@ -1,131 +1,96 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-
 import sqlite3
+import os
 
 
-# =========================
-# APP SETUP
-# =========================
-
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    static_folder="../frontend",
+    static_url_path=""
+)
 
 CORS(app)
 
 
-DATABASE = "tasks.db"
+BASE_DIR = os.path.dirname(
+    os.path.abspath(__file__)
+)
+
+DATABASE = os.path.join(
+    BASE_DIR,
+    "tasks.db"
+)
 
 
-# =========================
-# DATABASE CONNECTION
-# =========================
-
-def get_db_connection():
-
-    connection = sqlite3.connect(
-        DATABASE
+@app.route("/")
+def home():
+    return send_from_directory(
+        app.static_folder,
+        "index.html"
     )
 
-    connection.row_factory = sqlite3.Row
 
+def get_db_connection():
+    connection = sqlite3.connect(DATABASE)
+    connection.row_factory = sqlite3.Row
     return connection
 
 
-# =========================
-# CREATE TABLE
-# =========================
-
 def create_table():
-
     connection = get_db_connection()
-
 
     connection.execute(
         """
         CREATE TABLE IF NOT EXISTS tasks (
-
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-
             title TEXT NOT NULL,
-
             completed INTEGER DEFAULT 0,
-
             completed_at TEXT
-
         )
         """
     )
 
-
     connection.commit()
-
     connection.close()
 
 
 create_table()
 
 
-# =========================
-# GET ALL TASKS
-# =========================
-
-@app.route(
-    "/tasks",
-    methods=["GET"]
-)
+@app.route("/tasks", methods=["GET"])
 def get_tasks():
 
     connection = get_db_connection()
-
 
     tasks = connection.execute(
         """
         SELECT *
         FROM tasks
-        ORDER BY
-            completed ASC,
-            id DESC
+        ORDER BY completed ASC, id DESC
         """
     ).fetchall()
 
-
     connection.close()
 
-
     return jsonify(
-        [
-            dict(task)
-            for task in tasks
-        ]
+        [dict(task) for task in tasks]
     )
 
 
-# =========================
-# ADD TASK
-# =========================
-
-@app.route(
-    "/tasks",
-    methods=["POST"]
-)
+@app.route("/tasks", methods=["POST"])
 def add_task():
 
     data = request.get_json()
 
-
     title = data.get("title", "").strip()
 
-
     if title == "":
-
         return jsonify({
-            "error":
-                "Task title is required"
+            "error": "Task title is required"
         }), 400
 
-
     connection = get_db_connection()
-
 
     connection.execute(
         """
@@ -135,21 +100,13 @@ def add_task():
         (title,)
     )
 
-
     connection.commit()
-
     connection.close()
 
-
     return jsonify({
-        "message":
-            "Task added successfully"
+        "message": "Task added successfully"
     }), 201
 
-
-# =========================
-# COMPLETE / UNDO TASK
-# =========================
 
 @app.route(
     "/tasks/<int:task_id>/toggle",
@@ -158,7 +115,6 @@ def add_task():
 def toggle_task(task_id):
 
     connection = get_db_connection()
-
 
     task = connection.execute(
         """
@@ -169,72 +125,48 @@ def toggle_task(task_id):
         (task_id,)
     ).fetchone()
 
-
     if task is None:
 
         connection.close()
 
-
         return jsonify({
-            "error":
-                "Task not found"
+            "error": "Task not found"
         }), 404
-
-
-    # If already completed → Undo
 
     if task["completed"] == 1:
 
         connection.execute(
             """
             UPDATE tasks
-
-            SET
-                completed = 0,
+            SET completed = 0,
                 completed_at = NULL
-
             WHERE id = ?
             """,
             (task_id,)
         )
-
-
-    # If active → Complete
 
     else:
 
         connection.execute(
             """
             UPDATE tasks
-
-            SET
-                completed = 1,
-                completed_at =
-                    datetime(
-                        'now',
-                        'localtime'
-                    )
-
+            SET completed = 1,
+                completed_at = datetime(
+                    'now',
+                    'localtime'
+                )
             WHERE id = ?
             """,
             (task_id,)
         )
 
-
     connection.commit()
-
     connection.close()
 
-
     return jsonify({
-        "message":
-            "Task updated successfully"
+        "message": "Task updated successfully"
     })
 
-
-# =========================
-# DELETE TASK
-# =========================
 
 @app.route(
     "/tasks/<int:task_id>",
@@ -244,7 +176,6 @@ def delete_task(task_id):
 
     connection = get_db_connection()
 
-
     connection.execute(
         """
         DELETE FROM tasks
@@ -253,26 +184,18 @@ def delete_task(task_id):
         (task_id,)
     )
 
-
     connection.commit()
-
     connection.close()
 
-
     return jsonify({
-        "message":
-            "Task deleted successfully"
+        "message": "Task deleted successfully"
     })
 
-
-# =========================
-# RUN SERVER
-# =========================
 
 if __name__ == "__main__":
 
     app.run(
-        host="127.0.0.1",
+        host="0.0.0.0",
         port=5000,
         debug=True
     )
