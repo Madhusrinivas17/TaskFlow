@@ -1,0 +1,278 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+import sqlite3
+
+
+# =========================
+# APP SETUP
+# =========================
+
+app = Flask(__name__)
+
+CORS(app)
+
+
+DATABASE = "tasks.db"
+
+
+# =========================
+# DATABASE CONNECTION
+# =========================
+
+def get_db_connection():
+
+    connection = sqlite3.connect(
+        DATABASE
+    )
+
+    connection.row_factory = sqlite3.Row
+
+    return connection
+
+
+# =========================
+# CREATE TABLE
+# =========================
+
+def create_table():
+
+    connection = get_db_connection()
+
+
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tasks (
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            title TEXT NOT NULL,
+
+            completed INTEGER DEFAULT 0,
+
+            completed_at TEXT
+
+        )
+        """
+    )
+
+
+    connection.commit()
+
+    connection.close()
+
+
+create_table()
+
+
+# =========================
+# GET ALL TASKS
+# =========================
+
+@app.route(
+    "/tasks",
+    methods=["GET"]
+)
+def get_tasks():
+
+    connection = get_db_connection()
+
+
+    tasks = connection.execute(
+        """
+        SELECT *
+        FROM tasks
+        ORDER BY
+            completed ASC,
+            id DESC
+        """
+    ).fetchall()
+
+
+    connection.close()
+
+
+    return jsonify(
+        [
+            dict(task)
+            for task in tasks
+        ]
+    )
+
+
+# =========================
+# ADD TASK
+# =========================
+
+@app.route(
+    "/tasks",
+    methods=["POST"]
+)
+def add_task():
+
+    data = request.get_json()
+
+
+    title = data.get("title", "").strip()
+
+
+    if title == "":
+
+        return jsonify({
+            "error":
+                "Task title is required"
+        }), 400
+
+
+    connection = get_db_connection()
+
+
+    connection.execute(
+        """
+        INSERT INTO tasks (title)
+        VALUES (?)
+        """,
+        (title,)
+    )
+
+
+    connection.commit()
+
+    connection.close()
+
+
+    return jsonify({
+        "message":
+            "Task added successfully"
+    }), 201
+
+
+# =========================
+# COMPLETE / UNDO TASK
+# =========================
+
+@app.route(
+    "/tasks/<int:task_id>/toggle",
+    methods=["PUT"]
+)
+def toggle_task(task_id):
+
+    connection = get_db_connection()
+
+
+    task = connection.execute(
+        """
+        SELECT completed
+        FROM tasks
+        WHERE id = ?
+        """,
+        (task_id,)
+    ).fetchone()
+
+
+    if task is None:
+
+        connection.close()
+
+
+        return jsonify({
+            "error":
+                "Task not found"
+        }), 404
+
+
+    # If already completed → Undo
+
+    if task["completed"] == 1:
+
+        connection.execute(
+            """
+            UPDATE tasks
+
+            SET
+                completed = 0,
+                completed_at = NULL
+
+            WHERE id = ?
+            """,
+            (task_id,)
+        )
+
+
+    # If active → Complete
+
+    else:
+
+        connection.execute(
+            """
+            UPDATE tasks
+
+            SET
+                completed = 1,
+                completed_at =
+                    datetime(
+                        'now',
+                        'localtime'
+                    )
+
+            WHERE id = ?
+            """,
+            (task_id,)
+        )
+
+
+    connection.commit()
+
+    connection.close()
+
+
+    return jsonify({
+        "message":
+            "Task updated successfully"
+    })
+
+
+# =========================
+# DELETE TASK
+# =========================
+
+@app.route(
+    "/tasks/<int:task_id>",
+    methods=["DELETE"]
+)
+def delete_task(task_id):
+
+    connection = get_db_connection()
+
+
+    connection.execute(
+        """
+        DELETE FROM tasks
+        WHERE id = ?
+        """,
+        (task_id,)
+    )
+
+
+    connection.commit()
+
+    connection.close()
+
+
+    return jsonify({
+        "message":
+            "Task deleted successfully"
+    })
+
+
+# =========================
+# RUN SERVER
+# =========================
+
+if __name__ == "__main__":
+
+    app.run(
+        host="127.0.0.1",
+        port=5000,
+        debug=True
+    )
