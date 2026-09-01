@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from datetime import datetime
 import sqlite3
 import os
 
@@ -104,10 +105,7 @@ create_table()
 # GET ALL TASKS
 # =========================
 
-@app.route(
-    "/tasks",
-    methods=["GET"]
-)
+@app.route( "/tasks", methods=["GET"])
 def get_tasks():
 
     connection = get_db_connection()
@@ -225,20 +223,19 @@ def toggle_task(task_id):
 
     else:
 
+        completed_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         connection.execute(
             """
             UPDATE tasks
 
             SET
                 completed = 1,
-                completed_at = datetime(
-                    'now',
-                    'localtime'
-                )
+                completed_at = ?
 
             WHERE id = ?
             """,
-            (task_id,)
+            (completed_at, task_id)
         )
 
 
