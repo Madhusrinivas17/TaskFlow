@@ -223,7 +223,7 @@ def toggle_task(task_id):
 
     else:
 
-        completed_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        completed_at = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M:%S")
 
         connection.execute(
             """
