@@ -332,8 +332,6 @@ async function toggleTask(id) {
     loadTasks();
 
 }
-
-
 // =========================
 // DELETE TASK
 // =========================
